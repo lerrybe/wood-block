@@ -1,8 +1,9 @@
 /** @type {import('vite').UserConfig} */
 export default {
-  root: 'src',
+  root: "src",
   build: {
-    outDir: '../dist',
+    outDir: "../dist",
     emptyOutDir: true,
+    base: "/wood-block/",
   },
-}
+};
