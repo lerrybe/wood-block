@@ -138,8 +138,9 @@ function setCameraView(position, lookAt) {
   camera = orthographicCamera;
   camera.position.set(...position);
   camera.lookAt(...lookAt);
-  camera.zoom = 1; // 확대/축소 상태 초기화
-  camera.updateProjectionMatrix(); // 프로젝션 매트릭스 업데이트
+  camera.zoom = 1;
+  camera.updateProjectionMatrix();
+  rollOverMesh.visible = false; // 호버 메시 숨김
   render();
 }
 
@@ -148,6 +149,7 @@ function setCameraPerspective() {
   camera = perspectiveCamera;
   camera.position.set(500, 800, 1300);
   camera.lookAt(scene.position);
+  rollOverMesh.visible = true; // 호버 메시 보이기
   render();
 }
 
@@ -167,48 +169,56 @@ function onWindowResize() {
 }
 
 function onPointerMove(event) {
-  pointer.set(
-    (event.clientX / window.innerWidth) * 2 - 1,
-    -(event.clientY / window.innerHeight) * 2 + 1
-  );
-  raycaster.setFromCamera(pointer, camera);
-  const intersects = raycaster.intersectObjects(objects, false);
+  if (!useOrthographic) {
+    pointer.set(
+      (event.clientX / window.innerWidth) * 2 - 1,
+      -(event.clientY / window.innerHeight) * 2 + 1
+    );
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects(objects, false);
 
-  if (intersects.length > 0) {
-    const intersect = intersects[0];
-    rollOverMesh.position.copy(intersect.point).add(intersect.face.normal);
-    rollOverMesh.position
-      .divideScalar(50)
-      .floor()
-      .multiplyScalar(50)
-      .addScalar(25);
-    render();
+    if (intersects.length > 0) {
+      const intersect = intersects[0];
+      rollOverMesh.position.copy(intersect.point).add(intersect.face.normal);
+      rollOverMesh.position
+        .divideScalar(50)
+        .floor()
+        .multiplyScalar(50)
+        .addScalar(25);
+      render();
+    }
   }
 }
 
 function onPointerDown(event) {
-  pointer.set(
-    (event.clientX / window.innerWidth) * 2 - 1,
-    -(event.clientY / window.innerHeight) * 2 + 1
-  );
-  raycaster.setFromCamera(pointer, camera);
-  const intersects = raycaster.intersectObjects(objects, false);
+  if (!useOrthographic) {
+    pointer.set(
+      (event.clientX / window.innerWidth) * 2 - 1,
+      -(event.clientY / window.innerHeight) * 2 + 1
+    );
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects(objects, false);
 
-  if (intersects.length > 0) {
-    const intersect = intersects[0];
-    if (isShiftDown) {
-      if (intersect.object !== plane) {
-        scene.remove(intersect.object);
-        objects.splice(objects.indexOf(intersect.object), 1);
+    if (intersects.length > 0) {
+      const intersect = intersects[0];
+      if (isShiftDown) {
+        if (intersect.object !== plane) {
+          scene.remove(intersect.object);
+          objects.splice(objects.indexOf(intersect.object), 1);
+        }
+      } else {
+        const voxel = new THREE.Mesh(cubeGeo, cubeMaterial);
+        voxel.position.copy(intersect.point).add(intersect.face.normal);
+        voxel.position
+          .divideScalar(50)
+          .floor()
+          .multiplyScalar(50)
+          .addScalar(25);
+        scene.add(voxel);
+        objects.push(voxel);
       }
-    } else {
-      const voxel = new THREE.Mesh(cubeGeo, cubeMaterial);
-      voxel.position.copy(intersect.point).add(intersect.face.normal);
-      voxel.position.divideScalar(50).floor().multiplyScalar(50).addScalar(25);
-      scene.add(voxel);
-      objects.push(voxel);
+      render();
     }
-    render();
   }
 }
 
@@ -227,3 +237,8 @@ function onDocumentKeyUp(event) {
 function render() {
   renderer.render(scene, camera);
 }
+
+// 추가한 기능: orbit controls 추가 -> 마우스로 카메라 조작 가능
+// 추가한 기능: 원근 on off -> 카메라 위치를 조작하는 버튼 추가 -> top, side, front, 이 때는 원근 투영이 적용되지 않음
+// 추가한 기능: topView, sideView, frontView 일 때 휠 or 트랙패드 축소 (아직)
+// 각 뷰에서는 카메라 위치를 고정하고, 확대/축소만 가능하도록 함
